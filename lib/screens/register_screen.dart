@@ -9,6 +9,9 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  String email;
+  String password;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,7 +33,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               height: 48.0,
             ),
             TextField(
-                onChanged: (value) {},
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.emailAddress,
+                onChanged: (value) {
+                  email = value;
+                },
                 decoration: kTextFieldDecoration.copyWith(
                   hintText: 'Enter your email',
                 )),
@@ -38,7 +45,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               height: 8.0,
             ),
             TextField(
-              onChanged: (value) {},
+              obscuringCharacter: '.',
+              obscureText: true,
+              textAlign: TextAlign.center,
+              onChanged: (value) {
+                password = value;
+              },
               decoration: kTextFieldDecoration.copyWith(
                 hintText: 'Enter your password',
               ),

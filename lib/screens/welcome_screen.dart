@@ -31,6 +31,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   @override
+  void deactivate() {
+    super.deactivate();
+    controller.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
