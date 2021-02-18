@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_chat_app/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_chat_app/constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatScreen extends StatefulWidget {
   static final String id = 'chat_screen';
@@ -11,7 +12,10 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
   User loggedInUser;
+  String message;
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +33,25 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       print(e);
+    }
+  }
+
+  /// Used to get all the message from the 'messages' Collection
+  getMessages() async {
+    final messages = await _firestore.collection('messages').get();
+
+    for (var msg in messages.docs) {
+      print(msg.get('message'));
+    }
+  }
+
+  /// Used to subscribe to the snapshots 'service' and being notified
+  /// every time a new message is added to the collection
+  messagesStream() async {
+    await for (var snapshot in _firestore.collection('messages').snapshots()) {
+      for (var doc in snapshot.docs) {
+        print(doc.data());
+      }
     }
   }
 
@@ -61,14 +84,21 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       onChanged: (value) {
-                        //Do something with the user input.
+                        message = value;
                       },
                       decoration: kMessageTextFieldDecoration,
                     ),
                   ),
                   FlatButton(
                     onPressed: () {
-                      //Implement send functionality.
+                      _firestore
+                          .collection('messages')
+                          .add({
+                            'sender': loggedInUser.email,
+                            'message': message,
+                          })
+                          .then((value) => print("value: $value"))
+                          .catchError((error) => print("error: $error"));
                     },
                     child: Text(
                       'Send',
