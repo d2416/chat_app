@@ -3,6 +3,9 @@ import 'package:flash_chat_app/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_chat_app/constants.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flash_chat_app/collections/messages.dart';
+
+final _firestore = FirebaseFirestore.instance;
 
 class ChatScreen extends StatefulWidget {
   static final String id = 'chat_screen';
@@ -11,8 +14,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final messageTextController =
+      TextEditingController(); // to control the input field in the chat
   final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
   User loggedInUser;
   String message;
 
@@ -75,7 +79,8 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
+          children: [
+            MessageStream(),
             Container(
               decoration: kMessageContainerDecoration,
               child: Row(
@@ -83,6 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: <Widget>[
                   Expanded(
                     child: TextField(
+                      controller: messageTextController, // add controller
                       onChanged: (value) {
                         message = value;
                       },
@@ -91,14 +97,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   FlatButton(
                     onPressed: () {
-                      _firestore
-                          .collection('messages')
-                          .add({
-                            'sender': loggedInUser.email,
-                            'message': message,
-                          })
-                          .then((value) => print("value: $value"))
-                          .catchError((error) => print("error: $error"));
+                      _firestore.collection(Messages.name).add({
+                        Messages.sender: loggedInUser.email,
+                        Messages.message: message,
+                      }).then((value) {
+                        print("value: $value");
+                        messageTextController
+                            .clear(); // clean text field after sending the message
+                      }).catchError((error) => print("error: $error"));
                     },
                     child: Text(
                       'Send',
@@ -110,6 +116,91 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class MessageStream extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection(Messages.name).snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Center(
+            // use progress 'bar' while retrieving data
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.lightBlue),
+              backgroundColor: Colors.grey,
+              strokeWidth: 3,
+            ),
+          );
+        }
+
+        List<MessageBubble> messageBubbles = [];
+        for (var doc in snapshot.data.docs) {
+          final String msg = doc.get(Messages.message);
+          final String sender = doc.get(Messages.sender);
+
+          messageBubbles.add(
+            MessageBubble(message: msg, sender: sender),
+          );
+        }
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: 10.0,
+              vertical: 15.0,
+            ),
+            child: ListView(
+              children: messageBubbles,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class MessageBubble extends StatelessWidget {
+  const MessageBubble({
+    @required this.message,
+    @required this.sender,
+  });
+
+  final String message;
+  final String sender;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '$sender',
+            style: TextStyle(
+              color: Colors.black54,
+            ),
+          ),
+          Material(
+            elevation: 5.0,
+            borderRadius: BorderRadius.circular(24.0),
+            color: Colors.lightBlueAccent,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+              child: Text(
+                '$message',
+                style: TextStyle(
+                  fontSize: 18.0,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
