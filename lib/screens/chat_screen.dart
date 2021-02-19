@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_chat_app/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'package:flash_chat_app/collections/messages.dart';
 
 final _firestore = FirebaseFirestore.instance;
 User loggedInUser;
+ScrollController _scrollController = ScrollController();
 
 class ChatScreen extends StatefulWidget {
   static final String id = 'chat_screen';
@@ -96,9 +99,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   FlatButton(
                     onPressed: () {
-                      _firestore.collection(Messages.name).add({
-                        Messages.sender: loggedInUser.email,
-                        Messages.message: message,
+                      _firestore.collection(Collections.messages.name).add({
+                        Collections.messages.sender: loggedInUser.email,
+                        Collections.messages.message: message,
+                        Collections.messages.timestamp: DateTime.now(),
                       }).then((value) {
                         print("value: $value");
                         messageTextController
@@ -124,7 +128,10 @@ class MessageStream extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection(Messages.name).snapshots(),
+      stream: _firestore
+          .collection(Collections.messages.name)
+          .orderBy(Collections.messages.timestamp)
+          .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Center(
@@ -139,28 +146,36 @@ class MessageStream extends StatelessWidget {
 
         List<MessageBubble> messageBubbles = [];
         for (var doc in snapshot.data.docs) {
-          final String msg = doc.get(Messages.message);
-          final String sender = doc.get(Messages.sender);
+          Message msg = Message(
+            message: doc.get(Collections.messages.message),
+            sender: doc.get(Collections.messages.sender),
+            dateTime: doc.get(Collections.messages.timestamp).toDate(),
+          );
 
           final String currentUser = loggedInUser.email;
 
           messageBubbles.add(
             MessageBubble(
               message: msg,
-              sender: sender,
-              isMe: currentUser == sender,
+              isMe: currentUser == msg.sender,
             ),
           );
         }
+
+        if (messageBubbles.length > 0)
+          Timer(
+              Duration(milliseconds: 300),
+              () => _scrollController
+                  .jumpTo(_scrollController.position.maxScrollExtent));
+
         return Expanded(
-          child: Padding(
+          child: ListView(
+            controller: _scrollController,
             padding: EdgeInsets.symmetric(
               horizontal: 10.0,
               vertical: 15.0,
             ),
-            child: ListView(
-              children: messageBubbles,
-            ),
+            children: messageBubbles,
           ),
         );
       },
@@ -171,12 +186,10 @@ class MessageStream extends StatelessWidget {
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
     @required this.message,
-    @required this.sender,
     this.isMe,
   });
 
-  final String message;
-  final String sender;
+  final Message message;
   final bool isMe;
 
   @override
@@ -188,7 +201,7 @@ class MessageBubble extends StatelessWidget {
             isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Text(
-            '$sender',
+            '${message.sender}',
             style: TextStyle(
               color: Colors.black54,
             ),
@@ -201,16 +214,20 @@ class MessageBubble extends StatelessWidget {
                     bottomRight: Radius.circular(30.0),
                     bottomLeft: Radius.circular(30.0),
                   )
-                : BorderRadius.only(
-                    topRight: Radius.circular(30.0),
-                    bottomRight: Radius.circular(30.0),
-                    bottomLeft: Radius.circular(30.0),
-                  ),
+                : message.sender == 'init'
+                    ? BorderRadius.all(
+                        Radius.circular(30.0),
+                      )
+                    : BorderRadius.only(
+                        topRight: Radius.circular(30.0),
+                        bottomRight: Radius.circular(30.0),
+                        bottomLeft: Radius.circular(30.0),
+                      ),
             color: isMe ? Colors.lightBlueAccent : Colors.white,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
               child: Text(
-                '$message',
+                '${message.message}',
                 style: TextStyle(
                   fontSize: 18.0,
                   color: isMe ? Colors.white : Colors.black,

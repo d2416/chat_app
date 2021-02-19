@@ -1,6 +1,18 @@
-class Messages {
-  static final message = 'message';
-  static final sender = 'sender';
+class Collections {
+  static get messages => _Messages();
+}
 
-  static get name => 'messages';
+class _Messages {
+  get name => 'messages';
+  get message => 'message';
+  get sender => 'sender';
+  get timestamp => 'timestamp';
+}
+
+class Message {
+  String message;
+  String sender;
+  DateTime dateTime;
+
+  Message({this.sender, this.message, this.dateTime});
 }
