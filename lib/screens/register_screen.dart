@@ -16,15 +16,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String email;
   String password;
   bool modalProgress = false;
-
-  @override
-  void initState() {
-    super.initState();
-    setState(() {
-      email = "";
-      password = "";
-    });
-  }
+  final emailTextController = TextEditingController();
+  final passwordTextController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 height: 48.0,
               ),
               TextField(
+                  controller: emailTextController,
                   textAlign: TextAlign.center,
                   keyboardType: TextInputType.emailAddress,
                   onChanged: (value) {
@@ -63,6 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 height: 8.0,
               ),
               TextField(
+                controller: passwordTextController,
                 obscuringCharacter: '.',
                 obscureText: true,
                 textAlign: TextAlign.center,
@@ -87,6 +82,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     await _auth.createUserWithEmailAndPassword(
                         email: email, password: password);
                     Navigator.pushNamed(context, ChatScreen.id);
+                    emailTextController.clear();
+                    passwordTextController.clear();
                   } on FirebaseAuthException catch (e) {
                     if (e.code == 'weak-password') {
                       print('The password provided is too weak.');

@@ -14,25 +14,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _auth = FirebaseAuth.instance;
 
+  final emailTextController = TextEditingController();
+  final passwordTextController = TextEditingController();
+
   String email;
   String password;
   bool modalProgress = false;
-
-  @override
-  void initState() {
-    super.initState();
-    email = null;
-    password = null;
-  }
-
-  @override
-  void deactivate() {
-    super.deactivate();
-    setState(() {
-      email = null;
-      password = null;
-    });
-  }
+  String messageErrorLogin = '.';
+  bool hasMessageErrorLogin = false;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +47,22 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(
                 height: 48.0,
               ),
+              Visibility(
+                visible: hasMessageErrorLogin,
+                child: Column(
+                  children: [
+                    Text(
+                      '$messageErrorLogin Please, try again.',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    SizedBox(
+                      height: 5.0,
+                    ),
+                  ],
+                ),
+              ),
               TextField(
+                controller: emailTextController,
                 textAlign: TextAlign.center,
                 keyboardType: TextInputType.emailAddress,
                 onChanged: (value) {
@@ -72,6 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 8.0,
               ),
               TextField(
+                controller: passwordTextController,
                 textAlign: TextAlign.center,
                 obscuringCharacter: '.',
                 obscureText: true,
@@ -100,8 +105,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (user != null) {
                       Navigator.pushNamed(context, ChatScreen.id);
                     }
-                  } catch (e) {
-                    print("you are here $e");
+                    emailTextController.clear();
+                    passwordTextController.clear();
+                  } on FirebaseAuthException catch (e) {
+                    if (e.code == "user-not-found") {
+                      messageErrorLogin = "User or password incorrect";
+                    } else {
+                      messageErrorLogin = e.message;
+                    }
+                    hasMessageErrorLogin = true;
+                    print("you are here ${e.code}");
                   } finally {
                     setState(() {
                       modalProgress = false;
