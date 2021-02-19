@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flash_chat_app/collections/messages.dart';
 
 final _firestore = FirebaseFirestore.instance;
+User loggedInUser;
 
 class ChatScreen extends StatefulWidget {
   static final String id = 'chat_screen';
@@ -17,7 +18,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final messageTextController =
       TextEditingController(); // to control the input field in the chat
   final _auth = FirebaseAuth.instance;
-  User loggedInUser;
   String message;
 
   @override
@@ -31,7 +31,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final User user = _auth.currentUser;
       if (user != null) {
         loggedInUser = user;
-        print(loggedInUser.email);
       } else {
         throw FirebaseAuthException;
       }
@@ -143,8 +142,14 @@ class MessageStream extends StatelessWidget {
           final String msg = doc.get(Messages.message);
           final String sender = doc.get(Messages.sender);
 
+          final String currentUser = loggedInUser.email;
+
           messageBubbles.add(
-            MessageBubble(message: msg, sender: sender),
+            MessageBubble(
+              message: msg,
+              sender: sender,
+              isMe: currentUser == sender,
+            ),
           );
         }
         return Expanded(
@@ -167,17 +172,20 @@ class MessageBubble extends StatelessWidget {
   const MessageBubble({
     @required this.message,
     @required this.sender,
+    this.isMe,
   });
 
   final String message;
   final String sender;
+  final bool isMe;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.all(10.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment:
+            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Text(
             '$sender',
@@ -187,15 +195,25 @@ class MessageBubble extends StatelessWidget {
           ),
           Material(
             elevation: 5.0,
-            borderRadius: BorderRadius.circular(24.0),
-            color: Colors.lightBlueAccent,
+            borderRadius: isMe
+                ? BorderRadius.only(
+                    topLeft: Radius.circular(30.0),
+                    bottomRight: Radius.circular(30.0),
+                    bottomLeft: Radius.circular(30.0),
+                  )
+                : BorderRadius.only(
+                    topRight: Radius.circular(30.0),
+                    bottomRight: Radius.circular(30.0),
+                    bottomLeft: Radius.circular(30.0),
+                  ),
+            color: isMe ? Colors.lightBlueAccent : Colors.white,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
               child: Text(
                 '$message',
                 style: TextStyle(
                   fontSize: 18.0,
-                  color: Colors.white,
+                  color: isMe ? Colors.white : Colors.black,
                 ),
               ),
             ),
